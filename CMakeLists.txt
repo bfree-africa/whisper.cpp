@@ -73,6 +73,7 @@ option(WHISPER_SANITIZE_UNDEFINED "whisper: enable undefined sanitizer" OFF)
 option(WHISPER_BUILD_TESTS    "whisper: build tests"          ${WHISPER_STANDALONE})
 option(WHISPER_BUILD_EXAMPLES "whisper: build examples"       ${WHISPER_STANDALONE})
 option(WHISPER_BUILD_SERVER   "whisper: build server example" ${WHISPER_STANDALONE})
+option(WHISPER_BUILD_LLM      "whisper: build whisper_llm example" ${WHISPER_STANDALONE})
 
 # 3rd party libs
 option(WHISPER_CURL "whisper: use libcurl to download model from an URL" OFF)
@@ -182,4 +183,47 @@ endif ()
 
 if (WHISPER_BUILD_EXAMPLES)
     add_subdirectory(examples)
+endif()
+
+# Add this new section for whisper_llm
+if (WHISPER_BUILD_LLM)
+    # Find required packages
+    find_package(SDL2 REQUIRED)
+    find_package(CURL REQUIRED)
+    find_package(nlohmann_json REQUIRED)
+    find_package(Boost REQUIRED COMPONENTS system)
+    find_package(OpenSSL REQUIRED)
+
+    # Add whisper_llm executable
+    add_executable(whisper-llm examples/whisper_llm/whisper_llm.cpp)
+
+    target_include_directories(whisper-llm PRIVATE 
+        ${SDL2_INCLUDE_DIRS}
+        ${CURL_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/examples
+        ${Boost_INCLUDE_DIRS}
+        /usr/include/websocketpp  # System-installed WebSocket++
+        /usr/include/asio        # System-installed ASIO
+    )
+
+    target_link_libraries(whisper-llm PRIVATE
+        whisper
+        common
+        ${SDL2_LIBRARIES}
+        ${CURL_LIBRARIES}
+        nlohmann_json::nlohmann_json
+        ${Boost_LIBRARIES}
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        pthread
+        ${CMAKE_DL_LIBS}
+    )
+
+    target_compile_definitions(whisper-llm PRIVATE
+        ASIO_STANDALONE
+        _WEBSOCKETPP_CPP11_STL_
+    )
+
+    # Install whisper-llm
+    install(TARGETS whisper-llm RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

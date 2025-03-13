@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test Client</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #log { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+        .controls { margin: 10px 0; }
+        button { padding: 5px 10px; margin-right: 5px; }
+        input { padding: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Test Client</h1>
+    
+    <div class="controls">
+        <button id="connectBtn">Connect</button>
+        <button id="disconnectBtn" disabled>Disconnect</button>
+    </div>
+    
+    <div class="controls">
+        <button id="pingBtn" disabled>Send Ping</button>
+        <input type="text" id="contactInput" value="8000000706" placeholder="Contact ID">
+        <button id="contactBtn" disabled>Send Contact</button>
+    </div>
+    
+    <h3>Connection Log:</h3>
+    <div id="log"></div>
+    
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const pingBtn = document.getElementById('pingBtn');
+        const contactBtn = document.getElementById('contactBtn');
+        const contactInput = document.getElementById('contactInput');
+        const logDiv = document.getElementById('log');
+        
+        let socket = null;
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateButtons(connected) {
+            connectBtn.disabled = connected;
+            disconnectBtn.disabled = !connected;
+            pingBtn.disabled = !connected;
+            contactBtn.disabled = !connected;
+        }
+        
+        connectBtn.addEventListener('click', () => {
+            const host = window.location.hostname || 'localhost';
+            const port = 8765;
+            const url = `ws://${host}:${port}`;
+            
+            log(`Connecting to ${url}...`);
+            socket = new WebSocket(url);
+            
+            socket.onopen = () => {
+                log('Connected successfully!');
+                updateButtons(true);
+            };
+            
+            socket.onclose = (event) => {
+                log(`Disconnected: (${event.code}) ${event.reason || 'No reason provided'}`);
+                updateButtons(false);
+                socket = null;
+            };
+            
+            socket.onerror = (error) => {
+                log(`Error: ${error.message || 'Unknown error'}`);
+            };
+            
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`Received: ${JSON.stringify(data, null, 2)}`);
+                } catch (e) {
+                    log(`Received non-JSON message: ${event.data}`);
+                }
+            };
+        });
+        
+        disconnectBtn.addEventListener('click', () => {
+            if (socket) {
+                socket.close();
+                log('Disconnecting...');
+            }
+        });
+        
+        pingBtn.addEventListener('click', () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const ping = {
+                    type: 'ping',
+                    time: Date.now()
+                };
+                socket.send(JSON.stringify(ping));
+                log(`Sent ping: ${JSON.stringify(ping)}`);
+            }
+        });
+        
+        contactBtn.addEventListener('click', () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const contact = {
+                    type: 'contact',
+                    contact_id: contactInput.value
+                };
+                socket.send(JSON.stringify(contact));
+                log(`Sent contact: ${JSON.stringify(contact)}`);
+            }
+        });
+    </script>
+</body>
+</html> 

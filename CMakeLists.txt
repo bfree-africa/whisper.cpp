@@ -227,3 +227,48 @@ if (WHISPER_BUILD_LLM)
     # Install whisper-llm
     install(TARGETS whisper-llm RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
+
+# Add option to build whisper_bedrock
+option(WHISPER_BUILD_BEDROCK "whisper: build whisper_bedrock example" ${WHISPER_STANDALONE})
+
+# Add this section for whisper_bedrock with Boost.Beast
+if (WHISPER_BUILD_BEDROCK)
+    # Find required packages
+    find_package(SDL2 REQUIRED)
+    find_package(CURL REQUIRED)
+    find_package(nlohmann_json REQUIRED)
+    find_package(Boost REQUIRED COMPONENTS system thread)
+    find_package(ZLIB REQUIRED)
+    
+    # Add whisper_bedrock executable with WebSocketSession implementation
+    add_executable(whisper-bedrock 
+        examples/whisper_bedrock/whisper_bedrock.cpp
+    )
+    
+    # Define the correct include paths
+    target_include_directories(whisper-bedrock PRIVATE 
+        ${SDL2_INCLUDE_DIRS}
+        ${CURL_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/examples
+        ${Boost_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(whisper-bedrock PRIVATE
+        whisper
+        common
+        ${SDL2_LIBRARIES}
+        ${CURL_LIBRARIES}
+        nlohmann_json::nlohmann_json
+        ${Boost_LIBRARIES}
+        pthread
+        ${CMAKE_DL_LIBS}
+        ZLIB::ZLIB
+    )
+
+    target_compile_definitions(whisper-bedrock PRIVATE
+        USE_BOOST_BEAST
+    )
+
+    # Install whisper-bedrock
+    install(TARGETS whisper-bedrock RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
